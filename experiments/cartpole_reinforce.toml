@@ -1,0 +1,11 @@
+models = ["linear", "mlp_32", "mlp_64x64"]
+
+[train]
+environment = "cartpole"
+seeds = [42, 43, 44]
+episodes = 2000
+gamma = 0.99
+learning_rate = 0.01
+
+[evaluate]
+episodes = 20
