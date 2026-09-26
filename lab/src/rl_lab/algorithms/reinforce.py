@@ -24,6 +24,7 @@ def train(
     label: str,
 ) -> list[float]:
     torch.manual_seed(seed)
+    device = next(policy.parameters()).device
     environment = make_environment(environment_name)
     optimizer = torch.optim.Adam(policy.parameters(), lr=learning_rate)
     scores: list[float] = []
@@ -36,13 +37,15 @@ def train(
             done = False
 
             while not done:
-                distribution = Categorical(logits=policy(torch.as_tensor(observation)))
+                distribution = Categorical(
+                    logits=policy(torch.as_tensor(observation, device=device))
+                )
                 action = distribution.sample()
                 observation, reward, done = environment.step(action.item())
                 log_probabilities.append(distribution.log_prob(action))
                 rewards.append(reward)
 
-            returns = discounted_returns(rewards, gamma)
+            returns = discounted_returns(rewards, gamma).to(device)
             returns = (returns - returns.mean()) / (
                 returns.std(correction=0) + 1e-8
             )
@@ -67,6 +70,7 @@ def train(
 def evaluate(
     environment_name: str, policy: nn.Module, seed: int, episodes: int
 ) -> list[float]:
+    device = next(policy.parameters()).device
     environment = make_environment(environment_name)
     scores: list[float] = []
     try:
@@ -75,7 +79,9 @@ def evaluate(
             score = 0.0
             done = False
             while not done:
-                action = policy(torch.as_tensor(observation)).argmax().item()
+                action = (
+                    policy(torch.as_tensor(observation, device=device)).argmax().item()
+                )
                 observation, reward, done = environment.step(action)
                 score += reward
             scores.append(score)

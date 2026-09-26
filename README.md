@@ -10,6 +10,8 @@ uv run --project lab cartpole --config experiments/cartpole_reinforce.toml
 uv run --project lab plot-results runs/<run-directory>
 ```
 
+CUDA対応GPUが利用可能な場合、学習は自動的にGPUを使用します。
+
 モデルや学習率を一時的に絞る場合：
 
 ```powershell

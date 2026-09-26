@@ -71,7 +71,10 @@ def save_run(
         ),
         encoding="utf-8",
     )
-    torch.save(policy.state_dict(), directory / "model.pt")
+    torch.save(
+        {name: value.detach().cpu() for name, value in policy.state_dict().items()},
+        directory / "model.pt",
+    )
 
 
 def main() -> None:
@@ -89,6 +92,9 @@ def main() -> None:
         if args.learning_rate <= 0:
             parser.error("--learning-rate must be positive")
         config = replace(config, learning_rate=args.learning_rate)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device_name = torch.cuda.get_device_name(device) if device.type == "cuda" else "CPU"
+    print(f"device={device} ({device_name})")
     environment = make_environment(config.environment)
     try:
         observations = environment.observation_size
@@ -99,14 +105,23 @@ def main() -> None:
     run_dir = args.runs_dir / datetime.now().strftime("cartpole-%Y%m%d-%H%M%S")
     run_dir.mkdir(parents=True)
     (run_dir / "config.json").write_text(
-        json.dumps(asdict(config), indent=2), encoding="utf-8"
+        json.dumps(
+            {
+                **asdict(config),
+                "device": str(device),
+                "device_name": device_name,
+                "torch_version": torch.__version__,
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
     )
     results: list[dict[str, int | float | str]] = []
 
     for model_name in config.models:
         for seed in config.seeds:
             torch.manual_seed(seed)
-            policy = make_model(model_name, observations, actions)
+            policy = make_model(model_name, observations, actions).to(device)
             train_scores = train(
                 config.environment,
                 policy,
