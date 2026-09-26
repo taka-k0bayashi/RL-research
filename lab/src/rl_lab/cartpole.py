@@ -5,7 +5,7 @@ import csv
 import json
 import statistics
 import tomllib
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from datetime import datetime
 from pathlib import Path
 
@@ -78,9 +78,17 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Compare policies on CartPole")
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--runs-dir", type=Path, default=Path("runs"))
+    parser.add_argument("--models", nargs="+")
+    parser.add_argument("--learning-rate", type=float)
     args = parser.parse_args()
 
     config = load_config(args.config)
+    if args.models:
+        config = replace(config, models=tuple(args.models))
+    if args.learning_rate is not None:
+        if args.learning_rate <= 0:
+            parser.error("--learning-rate must be positive")
+        config = replace(config, learning_rate=args.learning_rate)
     environment = make_environment(config.environment)
     try:
         observations = environment.observation_size

@@ -10,6 +10,13 @@ uv run --project lab cartpole --config experiments/cartpole_reinforce.toml
 uv run --project lab plot-results runs/<run-directory>
 ```
 
+モデルや学習率を一時的に絞る場合：
+
+```powershell
+uv run --project lab cartpole --config experiments/cartpole_reinforce.toml `
+    --models mlp_64x64 --learning-rate 0.0003
+```
+
 Linear、MLP(32)、MLP(64×64)を3つのseedで学習します。学習曲線、確定した
 設定、モデル、評価結果、比較CSVとグラフは `runs/` に保存されます。
 
