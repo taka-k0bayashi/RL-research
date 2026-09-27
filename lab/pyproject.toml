@@ -14,6 +14,7 @@ dependencies = [
 
 [project.scripts]
 cartpole = "rl_lab.cartpole:main"
+distill-cartpole = "rl_lab.distill_cartpole:main"
 plot-results = "rl_lab.plot_results:main"
 
 [tool.uv.sources]

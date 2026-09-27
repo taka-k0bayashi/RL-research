@@ -13,6 +13,7 @@ from rl_lab.algorithms import (
     train_actor_critic,
     train_reinforce,
 )
+from rl_lab.algorithms.distillation import train as train_distillation
 from rl_lab.cartpole import load_config, save_run
 from rl_lab.envs import make_environment
 from rl_lab.models import make_model
@@ -193,6 +194,7 @@ class CartPoleTest(unittest.TestCase):
             next_observation, reward, done = environment.step(0)
             self.assertEqual(observation.shape, (4, 84, 84))
             self.assertEqual(next_observation.shape, (4, 84, 84))
+            self.assertEqual(environment.teacher_observation().shape, (4,))
             self.assertEqual(observation.dtype, np.float32)
             self.assertGreaterEqual(float(observation.min()), -1.0)
             self.assertLessEqual(float(observation.max()), 1.0)
@@ -218,6 +220,17 @@ class CartPoleTest(unittest.TestCase):
                     sum(parameter.numel() for parameter in model.parameters()),
                     parameters,
                 )
+
+    def test_distillation_smoke(self) -> None:
+        teacher = make_model("mlp_32", (4,), 2)
+        student = make_model("cnn_16x32_fc128", (4, 84, 84), 2)
+        student.critic.requires_grad_(False)
+        scores, losses, interrupted = train_distillation(
+            teacher, student, 0, 1, 0.0003, 1
+        )
+        self.assertEqual(len(scores), 1)
+        self.assertTrue(losses)
+        self.assertFalse(interrupted)
 
     def test_moving_average(self) -> None:
         np.testing.assert_allclose(

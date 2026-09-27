@@ -37,6 +37,14 @@ uv run --project lab cartpole --config experiments/cartpole_pixels_reinforce.tom
 uv run --project lab cartpole --config experiments/cartpole_pixels_actor_critic.toml
 ```
 
+Distill a trained vector policy into the pixel CNN:
+
+```powershell
+uv run --project lab distill-cartpole `
+    --teacher runs/cartpole-20260926-163719/mlp_32/seed-42/model.pt `
+    --teacher-model mlp_32
+```
+
 Press `Ctrl+C` once to save the current metrics and model before exiting.
 `episodes_per_update` environments run concurrently and share one batched CNN
 inference call.

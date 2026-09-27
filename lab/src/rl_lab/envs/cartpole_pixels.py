@@ -50,5 +50,11 @@ class CartPolePixelsEnvironment:
             terminated or truncated,
         )
 
+    def teacher_observation(self) -> NDArray[np.float32]:
+        state = self._environment.unwrapped.state
+        if state is None:
+            raise RuntimeError("The environment must be reset before reading its state")
+        return np.asarray(state, dtype=np.float32).copy()
+
     def close(self) -> None:
         self._environment.close()
