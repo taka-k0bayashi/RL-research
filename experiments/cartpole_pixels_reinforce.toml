@@ -1,0 +1,12 @@
+algorithm = "reinforce"
+models = ["cnn_16x32_fc128"]
+
+[train]
+environment = "cartpole_pixels"
+seeds = [42]
+episodes = 5000
+gamma = 0.99
+learning_rate = 0.0003
+
+[evaluate]
+episodes = 20

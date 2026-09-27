@@ -2,16 +2,8 @@ import torch
 from torch import nn
 from torch.distributions import Categorical
 
+from rl_lab.algorithms.actor_critic import discounted_returns
 from rl_lab.envs import make_environment
-
-
-def discounted_returns(rewards: list[float], gamma: float) -> torch.Tensor:
-    returns: list[float] = []
-    total = 0.0
-    for reward in reversed(rewards):
-        total = reward + gamma * total
-        returns.append(total)
-    return torch.tensor(list(reversed(returns)), dtype=torch.float32)
 
 
 def train(
@@ -22,15 +14,37 @@ def train(
     gamma: float,
     learning_rate: float,
     label: str,
-) -> list[float]:
+    start_episode: int = 0,
+    initial_scores: list[float] | None = None,
+    optimizer_state: dict[str, object] | None = None,
+    torch_rng_state: torch.Tensor | None = None,
+    cuda_rng_states: list[torch.Tensor] | None = None,
+) -> tuple[list[float], bool, dict[str, object]]:
     torch.manual_seed(seed)
     device = next(policy.parameters()).device
+    scores = list(initial_scores or [])
+    if len(scores) != start_episode:
+        raise ValueError("start_episode must match the number of existing scores")
     environment = make_environment(environment_name)
-    optimizer = torch.optim.Adam(policy.parameters(), lr=learning_rate)
-    scores: list[float] = []
+    optimizer = torch.optim.Adam(
+        (parameter for parameter in policy.parameters() if parameter.requires_grad),
+        lr=learning_rate,
+    )
+    if optimizer_state is not None:
+        optimizer.load_state_dict(optimizer_state)
+    if torch_rng_state is not None:
+        torch.set_rng_state(torch_rng_state)
+    if cuda_rng_states is not None and device.type == "cuda":
+        torch.cuda.set_rng_state_all(cuda_rng_states)
+    completed_episodes = start_episode
+    checkpoint_rng_state = torch.get_rng_state()
+    checkpoint_cuda_rng_states = (
+        torch.cuda.get_rng_state_all() if device.type == "cuda" else []
+    )
+    interrupted = False
 
     try:
-        for episode in range(episodes):
+        for episode in range(start_episode, episodes):
             observation = environment.reset(seed + episode)
             log_probabilities: list[torch.Tensor] = []
             rewards: list[float] = []
@@ -54,37 +68,26 @@ def train(
             loss.backward()
             optimizer.step()
             scores.append(sum(rewards))
+            completed_episodes = episode + 1
+            checkpoint_rng_state = torch.get_rng_state()
+            checkpoint_cuda_rng_states = (
+                torch.cuda.get_rng_state_all() if device.type == "cuda" else []
+            )
 
-            if (episode + 1) % 50 == 0:
+            if completed_episodes % 50 == 0:
                 print(
-                    f"model={label} seed={seed} episode={episode + 1} "
+                    f"model={label} seed={seed} episode={completed_episodes} "
                     f"mean_return={sum(scores[-50:]) / 50:.1f}"
                 )
+    except KeyboardInterrupt:
+        interrupted = True
+        scores = scores[:completed_episodes]
+        print(f"model={label} interrupted after {completed_episodes} episodes")
     finally:
         environment.close()
 
-    return scores
-
-
-@torch.inference_mode()
-def evaluate(
-    environment_name: str, policy: nn.Module, seed: int, episodes: int
-) -> list[float]:
-    device = next(policy.parameters()).device
-    environment = make_environment(environment_name)
-    scores: list[float] = []
-    try:
-        for episode in range(episodes):
-            observation = environment.reset(seed + 10_000 + episode)
-            score = 0.0
-            done = False
-            while not done:
-                action = (
-                    policy(torch.as_tensor(observation, device=device)).argmax().item()
-                )
-                observation, reward, done = environment.step(action)
-                score += reward
-            scores.append(score)
-    finally:
-        environment.close()
-    return scores
+    return scores, interrupted, {
+        "optimizer_state_dict": optimizer.state_dict(),
+        "torch_rng_state": checkpoint_rng_state,
+        "cuda_rng_state_all": checkpoint_cuda_rng_states,
+    }

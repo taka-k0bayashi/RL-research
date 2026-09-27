@@ -1,3 +1,4 @@
+algorithm = "reinforce"
 models = ["linear", "mlp_32", "mlp_64x64"]
 
 [train]

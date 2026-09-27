@@ -5,7 +5,7 @@ from numpy.typing import NDArray
 
 
 class Environment(Protocol):
-    observation_size: int
+    observation_shape: tuple[int, ...]
     action_size: int
 
     def reset(self, seed: int) -> NDArray[np.float32]: ...

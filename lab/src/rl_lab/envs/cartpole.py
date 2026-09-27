@@ -18,7 +18,7 @@ class CartPoleEnvironment:
         if not isinstance(action_space, gym.spaces.Discrete):
             self._environment.close()
             raise TypeError("CartPole requires a discrete action space")
-        self.observation_size = observation_space.shape[0]
+        self.observation_shape = observation_space.shape
         self.action_size = int(action_space.n)
 
     def reset(self, seed: int) -> NDArray[np.float32]:
