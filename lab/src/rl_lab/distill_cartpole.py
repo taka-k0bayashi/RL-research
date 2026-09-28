@@ -38,11 +38,14 @@ def load_policy_weights(model: nn.Module, path: Path) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Distill a vector CartPole policy into a pixel policy"
+        description="Distill a CartPole policy"
     )
     parser.add_argument("--teacher", type=Path, required=True)
     parser.add_argument("--teacher-model", default="mlp_32")
     parser.add_argument("--student-model", default="cnn_16x32_fc128")
+    parser.add_argument(
+        "--student-observation", choices=("pixels", "state"), default="pixels"
+    )
     parser.add_argument("--episodes", type=int, default=600)
     parser.add_argument("--evaluation-episodes", type=int, default=20)
     parser.add_argument("--learning-rate", type=float, default=0.0003)
@@ -61,7 +64,8 @@ def main() -> None:
     teacher_scores = evaluate("cartpole", teacher, args.seed, args.evaluation_episodes)
     print(f"device={device} teacher_evaluation={statistics.mean(teacher_scores):.1f}")
 
-    student = make_model(args.student_model, (4, 84, 84), 2).to(device)
+    student_shape = (4, 84, 84) if args.student_observation == "pixels" else (4,)
+    student = make_model(args.student_model, student_shape, 2).to(device)
     student.critic.requires_grad_(False)
     scores, losses, interrupted = train(
         teacher,
@@ -70,10 +74,11 @@ def main() -> None:
         args.episodes,
         args.learning_rate,
         args.parallel_environments,
+        args.student_observation,
     )
     evaluation_scores = (
         evaluate(
-            "cartpole_pixels",
+            "cartpole_pixels" if args.student_observation == "pixels" else "cartpole",
             student,
             args.seed,
             args.evaluation_episodes,

@@ -14,9 +14,12 @@ def train(
     episodes: int,
     learning_rate: float,
     parallel_environments: int,
+    student_observation: str = "pixels",
 ) -> tuple[list[float], list[float], bool]:
     if episodes < 1 or parallel_environments < 1:
         raise ValueError("episodes and parallel_environments must be positive")
+    if student_observation not in {"pixels", "state"}:
+        raise ValueError("student_observation must be 'pixels' or 'state'")
     torch.manual_seed(seed)
     device = next(student.parameters()).device
     environments = [
@@ -66,7 +69,9 @@ def train(
                 )
                 with torch.no_grad():
                     teacher_actions = teacher(states).argmax(dim=-1)
-                student_logits = student(pixels)
+                student_logits = student(
+                    states if student_observation == "state" else pixels
+                )
                 loss = nn.functional.cross_entropy(student_logits, teacher_actions)
                 optimizer.zero_grad()
                 loss.backward()

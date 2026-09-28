@@ -1,10 +1,10 @@
 algorithm = "reinforce"
-models = ["linear", "mlp_32", "mlp_64x64"]
+models = ["transformer_d32_h4_ff64"]
 
 [train]
 environment = "cartpole"
 seeds = [42, 43, 44]
-episodes = 2000
+episodes = 3000
 gamma = 0.99
 learning_rate = 0.01
 

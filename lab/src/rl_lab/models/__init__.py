@@ -5,6 +5,7 @@ from .cnn_16x32_fc512x128 import CNN16x32FC512x128Policy
 from .linear import LinearPolicy
 from .mlp_32 import MLP32Policy
 from .mlp_64x64 import MLP64x64Policy
+from .transformer_d32_h4_ff64 import TransformerD32H4FF64Policy
 
 MODELS: dict[str, type[nn.Module]] = {
     "cnn_16x32_fc128": CNN16x32FC128Policy,
@@ -12,6 +13,7 @@ MODELS: dict[str, type[nn.Module]] = {
     "linear": LinearPolicy,
     "mlp_32": MLP32Policy,
     "mlp_64x64": MLP64x64Policy,
+    "transformer_d32_h4_ff64": TransformerD32H4FF64Policy,
 }
 
 

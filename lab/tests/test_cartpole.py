@@ -28,10 +28,18 @@ class CartPoleTest(unittest.TestCase):
         )
 
     def test_model_sizes(self) -> None:
-        expected = {"linear": 15, "mlp_32": 259, "mlp_64x64": 4675}
+        expected = {
+            "linear": 15,
+            "mlp_32": 259,
+            "mlp_64x64": 4675,
+            "transformer_d32_h4_ff64": 8835,
+        }
         for name, parameters in expected.items():
             with self.subTest(model=name):
                 model = make_model(name, (4,), 2)
+                logits, value = model.actor_critic(torch.zeros(3, 4))
+                self.assertEqual(logits.shape, (3, 2))
+                self.assertEqual(value.shape, (3,))
                 self.assertEqual(
                     sum(parameter.numel() for parameter in model.parameters()),
                     parameters,
@@ -222,15 +230,37 @@ class CartPoleTest(unittest.TestCase):
                 )
 
     def test_distillation_smoke(self) -> None:
+        class OneStepEnvironment:
+            def reset(self, seed: int) -> np.ndarray:
+                return np.zeros((4, 84, 84), dtype=np.float32)
+
+            def teacher_observation(self) -> np.ndarray:
+                return np.zeros(4, dtype=np.float32)
+
+            def step(self, action: int) -> tuple[np.ndarray, float, bool]:
+                return np.zeros((4, 84, 84), dtype=np.float32), 1.0, True
+
+            def close(self) -> None:
+                pass
+
         teacher = make_model("mlp_32", (4,), 2)
-        student = make_model("cnn_16x32_fc128", (4, 84, 84), 2)
-        student.critic.requires_grad_(False)
-        scores, losses, interrupted = train_distillation(
-            teacher, student, 0, 1, 0.0003, 1
-        )
-        self.assertEqual(len(scores), 1)
-        self.assertTrue(losses)
-        self.assertFalse(interrupted)
+        with patch(
+            "rl_lab.algorithms.distillation.CartPolePixelsEnvironment",
+            OneStepEnvironment,
+        ):
+            for name, shape, observation in (
+                ("cnn_16x32_fc128", (4, 84, 84), "pixels"),
+                ("transformer_d32_h4_ff64", (4,), "state"),
+            ):
+                with self.subTest(model=name):
+                    student = make_model(name, shape, 2)
+                    student.critic.requires_grad_(False)
+                    scores, losses, interrupted = train_distillation(
+                        teacher, student, 0, 1, 0.0003, 1, observation
+                    )
+                    self.assertEqual(scores, [1.0])
+                    self.assertTrue(losses)
+                    self.assertFalse(interrupted)
 
     def test_moving_average(self) -> None:
         np.testing.assert_allclose(
