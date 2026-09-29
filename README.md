@@ -16,8 +16,8 @@ CUDA対応GPUが利用可能な場合、学習は自動的にGPUを使用しま�
 4次元の状態を入力する方策をREINFORCEまたはActor-Criticで学習します。
 
 ```powershell
-uv run --project lab cartpole --config experiments/cartpole_reinforce.toml
-uv run --project lab cartpole --config experiments/cartpole_actor_critic.toml
+uv run --project lab train --config experiments/cartpole_reinforce.toml
+uv run --project lab train --config experiments/cartpole_actor_critic.toml
 uv run --project lab plot-results runs/<run-directory>
 ```
 
@@ -31,7 +31,7 @@ uv run --project lab plot-results runs/<run-directory>
 モデルや学習率を一時的に上書きできます。
 
 ```powershell
-uv run --project lab cartpole --config experiments/cartpole_actor_critic.toml `
+uv run --project lab train --config experiments/cartpole_actor_critic.toml `
     --models transformer_d32_h4_ff64 --learning-rate 0.0003
 ```
 
@@ -40,7 +40,7 @@ uv run --project lab cartpole --config experiments/cartpole_actor_critic.toml `
 再開用チェックポイントを保存します。
 
 ```powershell
-uv run --project lab cartpole `
+uv run --project lab train `
     --config experiments/cartpole_actor_critic.toml `
     --resume runs/<run-directory>/<model>/seed-<seed>/checkpoint.pt
 ```
@@ -52,8 +52,8 @@ uv run --project lab cartpole `
 `cnn_16x32_fc128` を使用します。
 
 ```powershell
-uv run --project lab cartpole --config experiments/cartpole_pixels_reinforce.toml
-uv run --project lab cartpole --config experiments/cartpole_pixels_actor_critic.toml
+uv run --project lab train --config experiments/cartpole_pixels_reinforce.toml
+uv run --project lab train --config experiments/cartpole_pixels_actor_critic.toml
 ```
 
 `episodes_per_update` 個の環境を並列実行し、1回のバッチ推論を共有します。
@@ -89,7 +89,8 @@ lab/src/rl_lab/
 ├─ envs/
 │  ├─ base.py                         # 環境アダプターのProtocol
 │  ├─ cartpole.py                     # 状態入力CartPole
-│  └─ cartpole_pixels.py              # Pixel入力CartPole
+│  ├─ cartpole_pixels.py              # Pixel入力CartPole
+│  └─ point_maze.py                   # Point Maze (連続行動)
 ├─ models/
 │  ├─ linear.py
 │  ├─ mlp_32.py
@@ -97,7 +98,17 @@ lab/src/rl_lab/
 │  ├─ transformer_d32_h4_ff64.py
 │  ├─ cnn_16x32_fc128.py
 │  └─ cnn_16x32_fc512x128.py
-├─ cartpole.py                        # 設定、実行、集計
+├─ train.py                           # 設定、実行、集計
 ├─ distill_cartpole.py                # 蒸留CLI
 └─ plot_results.py                    # 結果の可視化
+```
+
+## Point Maze
+
+`gymnasium-robotics` の `PointMaze_UMaze-v3` を、ガウス方策のActor-Criticで学習します。
+観測は位置・速度とゴール座標の6次元、行動は2次元の連続値です。報酬はスパースで、
+ゴール到達でエピソードが終了するため、returnはそのまま成功率になります。
+
+```powershell
+uv run --project lab train --config experiments/point_maze_actor_critic.toml
 ```

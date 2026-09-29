@@ -14,7 +14,7 @@ from rl_lab.algorithms import (
     train_reinforce,
 )
 from rl_lab.algorithms.distillation import train as train_distillation
-from rl_lab.cartpole import load_config, save_run
+from rl_lab.train import load_config, save_run
 from rl_lab.envs import make_environment
 from rl_lab.models import make_model
 from rl_lab.plot_results import moving_average
@@ -80,6 +80,24 @@ class CartPoleTest(unittest.TestCase):
         self.assertEqual(len(scores), 1)
         self.assertFalse(interrupted)
         self.assertEqual(len(evaluation), 2)
+
+    def test_point_maze_gaussian_policy(self) -> None:
+        environment = make_environment("point_maze")
+        try:
+            self.assertEqual(environment.observation_shape, (6,))
+            self.assertEqual(environment.action_size, 2)
+            self.assertEqual(environment.reset(seed=0).shape, (6,))
+        finally:
+            environment.close()
+        model = make_model("mlp_32", (6,), 2, continuous=True)
+        scores, interrupted, _ = train_actor_critic(
+            "point_maze", model, 0, 2, 0.99, 0.95, 0.001, 0.0, 0.0, 0.5, 1.0, 2, "smoke"
+        )
+        evaluation = evaluate("point_maze", model, 0, 2, 2)
+        self.assertEqual(len(scores), 2)
+        self.assertFalse(interrupted)
+        self.assertEqual(len(evaluation), 2)
+        self.assertIsNotNone(model.log_std.grad)
 
     def test_reinforce_selection(self) -> None:
         config = load_config(Path("experiments/cartpole_reinforce.toml"))

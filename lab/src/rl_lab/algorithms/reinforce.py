@@ -1,8 +1,7 @@
 import torch
 from torch import nn
-from torch.distributions import Categorical
 
-from rl_lab.algorithms.actor_critic import discounted_returns
+from rl_lab.algorithms.actor_critic import action_distribution, discounted_returns
 from rl_lab.envs import make_environment
 
 
@@ -51,11 +50,11 @@ def train(
             done = False
 
             while not done:
-                distribution = Categorical(
-                    logits=policy(torch.as_tensor(observation, device=device))
+                distribution = action_distribution(
+                    policy, policy(torch.as_tensor(observation, device=device))
                 )
                 action = distribution.sample()
-                observation, reward, done = environment.step(action.item())
+                observation, reward, done = environment.step(action.tolist())
                 log_probabilities.append(distribution.log_prob(action))
                 rewards.append(reward)
 

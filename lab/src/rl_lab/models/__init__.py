@@ -1,3 +1,4 @@
+import torch
 from torch import nn
 
 from .cnn_16x32_fc128 import CNN16x32FC128Policy
@@ -18,13 +19,19 @@ MODELS: dict[str, type[nn.Module]] = {
 
 
 def make_model(
-    name: str, observation_shape: tuple[int, ...], actions: int
+    name: str,
+    observation_shape: tuple[int, ...],
+    actions: int,
+    continuous: bool = False,
 ) -> nn.Module:
     try:
-        model = MODELS[name]
+        model = MODELS[name](observation_shape, actions)
     except KeyError:
         raise ValueError(f"Unknown model: {name}") from None
-    return model(observation_shape, actions)
+    if continuous:
+        # The actor output becomes the Gaussian mean; the std is state-independent.
+        model.log_std = nn.Parameter(torch.zeros(actions))
+    return model
 
 
 __all__ = ["make_model"]

@@ -12,7 +12,7 @@ from torch import nn
 
 from rl_lab.algorithms import evaluate
 from rl_lab.algorithms.distillation import train
-from rl_lab.cartpole import save_run
+from rl_lab.train import save_run
 from rl_lab.models import make_model
 
 

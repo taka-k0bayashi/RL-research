@@ -3,7 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 import numpy as np
 import torch
 from torch import nn
-from torch.distributions import Categorical
+from torch.distributions import Categorical, Distribution, Independent, Normal
 
 from rl_lab.envs import make_environment
 
@@ -15,6 +15,12 @@ def discounted_returns(rewards: list[float], gamma: float) -> torch.Tensor:
         total = reward + gamma * total
         returns.append(total)
     return torch.tensor(list(reversed(returns)), dtype=torch.float32)
+
+
+def action_distribution(policy: nn.Module, output: torch.Tensor) -> Distribution:
+    if hasattr(policy, "log_std"):
+        return Independent(Normal(output, policy.log_std.exp()), 1)
+    return Categorical(logits=output)
 
 
 def train(
@@ -101,7 +107,7 @@ def train(
                         device=device,
                     )
                 )
-                distribution = Categorical(logits=logits)
+                distribution = action_distribution(policy, logits)
                 actions = distribution.sample()
                 active_log_probabilities = distribution.log_prob(actions)
                 active_entropies = distribution.entropy()
@@ -232,17 +238,15 @@ def evaluate(
             dones = [False] * batch_size
             while not all(dones):
                 active = [index for index, done in enumerate(dones) if not done]
-                actions = (
-                    policy(
-                        torch.as_tensor(
-                            np.stack([observations[index] for index in active]),
-                            device=device,
-                        )
+                outputs = policy(
+                    torch.as_tensor(
+                        np.stack([observations[index] for index in active]),
+                        device=device,
                     )
-                    .argmax(dim=-1)
-                    .cpu()
-                    .tolist()
                 )
+                if not hasattr(policy, "log_std"):
+                    outputs = outputs.argmax(dim=-1)
+                actions = outputs.cpu().tolist()
                 step_results = executor.map(
                     lambda pair: pair[0].step(pair[1]),
                     (

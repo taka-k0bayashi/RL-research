@@ -5,6 +5,7 @@ description = "Small reproducible reinforcement-learning experiments"
 readme = "../README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "gymnasium-robotics>=1.4.2",
     "gymnasium[classic-control]>=1.0",
     "matplotlib>=3.8",
     "numpy>=1.26",
@@ -13,7 +14,7 @@ dependencies = [
 ]
 
 [project.scripts]
-cartpole = "rl_lab.cartpole:main"
+train = "rl_lab.train:main"
 distill-cartpole = "rl_lab.distill_cartpole:main"
 plot-results = "rl_lab.plot_results:main"
 

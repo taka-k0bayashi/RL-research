@@ -124,7 +124,7 @@ def save_run(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Compare policies on CartPole")
+    parser = argparse.ArgumentParser(description="Compare policies on an environment")
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--runs-dir", type=Path, default=Path("runs"))
     parser.add_argument("--models", nargs="+")
@@ -169,10 +169,11 @@ def main() -> None:
     try:
         observation_shape = environment.observation_shape
         actions = environment.action_size
+        continuous = getattr(environment, "continuous", False)
     finally:
         environment.close()
 
-    run_dir = args.runs_dir / datetime.now().strftime("cartpole-%Y%m%d-%H%M%S")
+    run_dir = args.runs_dir / datetime.now().strftime(f"{config.environment}-%Y%m%d-%H%M%S")
     run_dir.mkdir(parents=True)
     (run_dir / "config.json").write_text(
         json.dumps(
@@ -196,7 +197,9 @@ def main() -> None:
     for model_name in config.models:
         for seed in config.seeds:
             torch.manual_seed(seed)
-            policy = make_model(model_name, observation_shape, actions).to(device)
+            policy = make_model(
+                model_name, observation_shape, actions, continuous
+            ).to(device)
             if config.algorithm == "reinforce":
                 policy.critic.requires_grad_(False)
             if resume_checkpoint is not None:
