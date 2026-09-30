@@ -8,8 +8,11 @@ dependencies = [
     "gymnasium-robotics>=1.4.2",
     "gymnasium[classic-control]>=1.0",
     "matplotlib>=3.8",
+    "minihack>=1.0.2; sys_platform != 'win32'",
+    "nle>=1.3; sys_platform != 'win32'",
     "numpy>=1.26",
     "pillow>=10",
+    "setuptools<81; sys_platform != 'win32'",
     "torch>=2.0",
 ]
 

@@ -11,6 +11,10 @@ def make_environment(name: str) -> Environment:
         return CartPolePixelsEnvironment()
     if name == "point_maze":
         return PointMazeEnvironment()
+    if name == "minihack_room_5x5":
+        from .minihack import MiniHackRoom5x5Environment
+
+        return MiniHackRoom5x5Environment()
     raise ValueError(f"Unknown environment: {name}")
 
 
